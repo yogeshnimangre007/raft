@@ -36,3 +36,7 @@ func (rs *raftState) setMode(mode Mode) {
 func (rs *raftState) getMode() Mode {
 	return Mode(atomic.LoadUint32((*uint32)(&rs.mode)))
 }
+
+func (rs *raftState) setCurrentTerm(t uint64) {
+	atomic.StoreUint64(&rs.currentTerm, t)
+}
