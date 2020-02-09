@@ -10,7 +10,7 @@ type RPCResponse struct {
 
 // RPC has a service to invoke, and provides a Reponse mechanism
 type RPC struct {
-	Service interface{}
+	Args interface{}
 	RespChan chan<- RPCResponse
 }
 
@@ -25,6 +25,9 @@ type Transport interface {
 	// Listen returns a channel that can be used to
 	// consume and respond to RPC requests.
 	Listen() <-chan RPC
+
+	// LocalAddr is used to return our local address to distinguish from our peers
+	LocalAddr() net.Addr
 
 	// AppendEntries sends the appropriate RPC to the target node
 	AppendEntries(target net.Addr, args *AppendEntriesArgs, resp *AppendEntriesResp) error
