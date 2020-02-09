@@ -2,6 +2,7 @@ package raft
 
 import (
 	"net"
+	"sync"
 )
 
 type Node struct {
@@ -11,22 +12,25 @@ type Node struct {
 	conf *Config
 
 	// Node Id to distinguish it from others
-	nodeID     string
+	nodeID string
 
 	// LogStore provides durable log storage
-	logs       LogStore
+	logs LogStore
 
 	// Transport layer , we are suing
-	trans      Transport
+	trans Transport
 
 	// Address of other known nodes
-	peers      []net.Addr
+	peers []net.Addr
 
 	// Channel to liste for RPC requests
-	rpcCh      <-chan RPC
+	rpcCh <-chan RPC
 
 	// Channel to signal the shutdown
 	shutdownCh <-chan struct{}
+
+	// routines bucket
+	routines sync.WaitGroup
 }
 
 func NewNode(logs LogStore, peers []net.Addr, trans Transport,
@@ -36,13 +40,13 @@ func NewNode(logs LogStore, peers []net.Addr, trans Transport,
 	nodeID := UUID()
 
 	rs := raftState{
-		currentTerm: 0,
-		votedFor: NULL,
-		commitIndex: 0,
+		currentTerm:      0,
+		votedFor:         NULL,
+		commitIndex:      0,
 		lastAppliedIndex: 0,
 	}
 	node := &Node{
-		raftState: rs,
+		raftState:  rs,
 		conf:       conf,
 		nodeID:     nodeID,
 		logs:       logs,
@@ -50,7 +54,16 @@ func NewNode(logs LogStore, peers []net.Addr, trans Transport,
 		peers:      peers,
 		rpcCh:      trans.Listen(),
 		shutdownCh: shutdownCh,
+		routines:   sync.WaitGroup{},
 	}
 
 	return node, nil
+}
+
+func (n *Node) goFunc(fn func()) {
+	n.routines.Add(1)
+	go func() {
+		defer n.routines.Done()
+		fn()
+	}()
 }
