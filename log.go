@@ -11,6 +11,9 @@ type Log struct {
 // LogStore is used to provide an interface for storing
 // and retrieving logs in a durable fashion
 type LogStore interface {
+	// Returns true if store is empty
+	Empty() bool
+
 	// Returns the last index written. 0 for no entries.
 	LastIndex() uint64
 
@@ -18,7 +21,7 @@ type LogStore interface {
 	LastTerm() uint64
 
 	// Gets a log entry at a given index
-	GetLog(index uint64, log *Log) error
+	GetLog(index uint64) (*Log, error)
 
 	// Stores a log entry
 	StoreLog(log *Log) error
@@ -26,4 +29,3 @@ type LogStore interface {
 	// Deletes a range of log entries. The range is inclusive.
 	DeleteRange(min, max uint64) error
 }
-
