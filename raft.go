@@ -67,3 +67,21 @@ func (n *Node) goFunc(fn func()) {
 		fn()
 	}()
 }
+
+// boot is a long goroutine to boot up the node
+func (n *Node) boot() {
+
+	// Set the node's mode to Follower
+	n.setMode(Follower)
+
+	for {
+		select {
+		case _ = <-n.rpcCh:
+			// Got an rpc request
+			// TODO
+		case <-randomTimeout(n.conf.ElectionTimeout):
+			// not heard from leader, become Candidate and start the election
+			// TODO
+		}
+	}
+}
