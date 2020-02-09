@@ -28,15 +28,24 @@ func NewFakeTransAddr() *FakeTransAddr {
 type FakeTransport struct {
 	sync.RWMutex
 	listenerCh chan RPC
-	localAddr  FakeTransAddr
+	localAddr  *FakeTransAddr
 	peers      map[string]*FakeTransport
+}
+
+func NewFakeTransport() *FakeTransport{
+	return &FakeTransport{
+		RWMutex:    sync.RWMutex{},
+		listenerCh: make(chan RPC),
+		localAddr:  NewFakeTransAddr(),
+		peers:      make(map[string]*FakeTransport),
+	}
 }
 
 func (ft *FakeTransport) Listen() <-chan RPC {
 	return ft.listenerCh
 }
 
-func (ft *FakeTransport) LocalAddr() FakeTransAddr {
+func (ft *FakeTransport) LocalAddr() net.Addr {
 	return ft.localAddr
 }
 
