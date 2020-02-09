@@ -32,3 +32,7 @@ type raftState struct {
 func (rs *raftState) setMode(mode Mode) {
 	atomic.StoreUint32((*uint32)(&rs.mode), uint32(mode))
 }
+
+func (rs *raftState) getMode() Mode {
+	return Mode(atomic.LoadUint32((*uint32)(&rs.mode)))
+}
