@@ -57,6 +57,9 @@ func NewNode(logs LogStore, peers []net.Addr, trans Transport,
 		routines:   sync.WaitGroup{},
 	}
 
+	// bootup the node
+	node.goFunc(node.boot)
+
 	return node, nil
 }
 
@@ -82,6 +85,76 @@ func (n *Node) boot() {
 		case <-randomTimeout(n.conf.ElectionTimeout):
 			// not heard from leader, become Candidate and start the election
 			// TODO
+		}
+	}
+}
+
+// runCandidate is a long goroutine which governs the operation of node
+// while in Candidate mode
+func (n *Node) runCandidate() {
+	// update term
+	n.setCurrentTerm(n.getCurrentTerm() + 1)
+
+	// voteCh to collect votes
+	voteCh := make(chan RequestVoteResp, len(n.peers))
+
+	// vote for yourself
+	voteCh <- RequestVoteResp{
+		Term:        n.currentTerm,
+		VoteGranted: true,
+	}
+
+	// Number of votes needed to win
+	voteNeedToWin := (len(n.peers) / 2) + 1
+
+	// Vote collected
+	voteCount := 0
+
+	//Ask vote from peers
+	askVoteFromPeer := func(peer net.Addr) {
+		args := &RequestVoteArgs{
+			Term:         n.currentTerm,
+			CandidateID:  n.nodeID,
+			LastLogIndex: n.logs.LastIndex(),
+			LastLogTerm:  n.logs.LastTerm(),
+		}
+
+		resp := new(RequestVoteResp)
+
+		n.goFunc(func() {
+			err := n.trans.RequestVote(peer, args, resp)
+			if err != nil {
+				// Didn't get the vote
+				// TODO Log
+			}
+
+			// send the vote
+			voteCh <- *(resp)
+		})
+	}
+
+	for _, peer := range n.peers {
+		askVoteFromPeer(peer)
+	}
+
+	// Determine if we won the election or not
+	for i := 0; i < len(n.peers); i++ {
+		select {
+		case rpcResp := <-voteCh:
+			if !rpcResp.VoteGranted {
+				// Vote request denied
+				// Got greater term, revert back to follower
+				// TODO revet state
+			} else {
+				// Vote request granted
+				voteCount += 1
+
+				// Check is we won the election
+				if voteCount >= voteNeedToWin {
+					// We won the election
+					// TODO become leader node
+				}
+			}
 		}
 	}
 }
